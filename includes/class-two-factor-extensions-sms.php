@@ -23,9 +23,39 @@ class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
 
 	const TOKEN_META_KEY = '_two_factor_extensions_sms_token';
 
+	/**
+	 * Two_Factor_Extensions_SMS constructor.
+	 */
+	protected function __construct() {
+		add_action( 'two-factor-user-options-' . __CLASS__, array( $this, 'user_options' ) );
+		return parent::__construct();
+	}
+
 	/** Returns the name of the provider. */
 	public function get_label() {
-		return __( 'SMS', 'two-factor-extensions' );
+		return __( 'Text Message', 'two-factor-extensions' );
+	}
+
+	/**
+	 * Inserts markup at the end of the user profile field for this provider.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param WP_User $user WP_User object of the logged-in user.
+	 */
+	public function user_options( $user ) {
+		$mobile = $user->get( 'mobile' );
+		?>
+        <div>
+			<?php
+			echo esc_html( sprintf(
+			/* translators: %s: email address */
+				__( 'Authentication codes will be sent to %s.', 'two-factor-extensions' ),
+				$mobile
+			) );
+			?>
+        </div>
+		<?php
 	}
 
 	/**

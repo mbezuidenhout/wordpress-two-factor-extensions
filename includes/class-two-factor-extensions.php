@@ -1,5 +1,4 @@
 <?php
-
 /**
  * The file that defines the core plugin class
  *
@@ -90,7 +89,8 @@ class Two_Factor_Extensions {
 		 * The class responsible for defining all actions that occur in the admin area.
 		 */
 		if ( is_user_logged_in() && is_admin() ) {
-			require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-tow-factor-extensions-admin.php';
+			require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-two-factor-extensions-admin.php';
+			require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-two-factor-extensions-settings.php';
 			$this->define_admin_hooks();
 		}
 	}
@@ -166,6 +166,9 @@ class Two_Factor_Extensions {
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
 
+		$this->loader->add_action( 'admin_menu', $plugin_admin, 'admin_menu_options' );
+
+		$this->loader->run();
 	}
 
 	/**

@@ -1,5 +1,4 @@
 <?php
-
 /**
  * The public-facing functionality of the plugin.
  *
@@ -131,7 +130,7 @@ class Two_Factor_Extensions_Public {
 	 * @return array
 	 */
 	public function add_providers( $providers ) {
-		$providers['Two_Factor_Extensions_SMS'] = plugin_dir_url( dirname( __FILE__ ) ) . 'includes/class-two-factor-extensions-sms.php';
+		$providers['Two_Factor_Extensions_SMS'] = plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-two-factor-extensions-sms.php';
 
 		return $providers;
 	}
