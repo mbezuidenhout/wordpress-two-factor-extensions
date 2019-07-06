@@ -49,7 +49,6 @@ class Two_Factor_Extensions_Settings {
 		$this->save_settings();
 
 		?>
-		<?php settings_errors(); ?>
 
         <form method="post" action="">
 
@@ -67,8 +66,13 @@ class Two_Factor_Extensions_Settings {
 
 	}
 
-	public function render_settings_field() {
-
+	public function render_settings_field( $field ) {
+		switch ( $field['type'] ) {
+			case 'text':
+			default:
+				echo '<input id="' . esc_attr( $field['id'] ) . '" type="text" value="' . esc_attr( $field['default'] ) . '" />';
+				break;
+		}
 	}
 
 	public function get_settings() {
@@ -81,22 +85,6 @@ class Two_Factor_Extensions_Settings {
 					'desc'    => 'Options available to the user',
 					'default' => '',
 					'type'    => 'radio',
-					'tip'     => true,
-				),
-				array(
-					'id'      => 'playsms_password',
-					'title'   => __( 'Password', 'playsms' ),
-					'desc'    => '',
-					'default' => '',
-					'type'    => 'password',
-					'tip'     => true,
-				),
-				array(
-					'id'      => 'playsms_webservices_token',
-					'title'   => __( 'Web Services Token', 'playsms' ),
-					'desc'    => '',
-					'default' => '',
-					'type'    => 'text',
 					'tip'     => true,
 				),
 			)

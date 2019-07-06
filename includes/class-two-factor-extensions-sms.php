@@ -21,13 +21,15 @@
  */
 class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
 
-	const TOKEN_META_KEY = '_two_factor_extensions_sms_token';
+	const TOKEN_META_KEY         = '_two_factor_extensions_sms_token';
+	const INPUT_NAME_RESEND_CODE = 'sms-resend-code';
 
 	/**
 	 * Two_Factor_Extensions_SMS constructor.
 	 */
 	protected function __construct() {
 		add_action( 'two-factor-user-options-' . __CLASS__, array( $this, 'user_options' ) );
+
 		return parent::__construct();
 	}
 
@@ -39,9 +41,9 @@ class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
 	/**
 	 * Inserts markup at the end of the user profile field for this provider.
 	 *
-	 * @since 1.0.0
-	 *
 	 * @param WP_User $user WP_User object of the logged-in user.
+	 *
+	 * @since 1.0.0
 	 */
 	public function user_options( $user ) {
 		$mobile = $user->get( 'mobile' );
@@ -49,7 +51,7 @@ class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
         <div>
 			<?php
 			echo esc_html( sprintf(
-			/* translators: %s: email address */
+			/* translators: %s: mobile phone number */
 				__( 'Authentication codes will be sent to %s.', 'two-factor-extensions' ),
 				$mobile
 			) );
@@ -59,21 +61,56 @@ class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
 	}
 
 	/**
+	 * Generate the user token.
+	 *
+	 * @param int $user_id User ID.
+	 *
+	 * @return string
+	 */
+	protected function generate_token( $user_id ) {
+		$token = $this->get_code();
+		update_user_meta( $user_id, self::TOKEN_META_KEY, wp_hash( $token ) );
+
+		return $token;
+	}
+
+	/**
 	 * Checks if the user has a token waiting.
 	 *
 	 * @param int $user_id WordPress user id.
+	 *
+	 * @return bool
 	 */
 	protected function user_has_token( $user_id ) {
-		// TODO: Implement user_has_token( $user_id ) method.
+		$hashed_token = $this->get_user_token( $user_id );
+
+		if ( ! empty( $hashed_token ) ) {
+			return true;
+		} else {
+			return false;
+		}
 	}
 
 	/**
 	 * Generate and send the user their token to be used to log in.
 	 *
 	 * @param WP_User $user WP_User object of the logged-in user.
+	 *
+	 * @return bool|WP_Error
 	 */
 	protected function generate_and_send_token( $user ) {
+		$token = $this->generate_token( $user->ID );
 
+		/* translators: 1: site name 2: token */
+		$message = wp_strip_all_tags( sprintf( __( 'Your login confirmation code for %1$s is %2$s.', 'two-factor-extensions' ), get_bloginfo( 'url' ), $token ) );
+
+		if ( function_exists( 'wp_sms' ) ) { // PlaySMS plugin.
+			return wp_sms( $user->get( 'mobile' ), $message );
+		} elseif ( function_exists( 'wp_send_sms' ) ) { // WP SMS plugin.
+			return wp_sms_send( $user->get( 'mobile' ), $message );
+		} else {
+			return new WP_Error( 'no_sms_mechanism', __( 'No compatible mechanism is activated to send sms messages', 'two-factor-extensions' ) );
+		}
 	}
 
 	/**
@@ -130,6 +167,39 @@ class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
 		}
 
 		return $this->validate_token( $user->ID, $_REQUEST['two-factor-sms-code'] );
+	}
+
+	/**
+	 * Get the stored user token.
+	 *
+	 * @param int $user_id The WordPress user id.
+	 *
+	 * @return bool|mixed
+	 */
+	protected function get_user_token( $user_id ) {
+		$hashed_token = get_user_meta( $user_id, self::TOKEN_META_KEY, true );
+
+		if ( ! empty( $hashed_token ) && is_string( $hashed_token ) ) {
+			return $hashed_token;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Send the email code if missing or requested. Stop the authentication
+	 * validation if a new token has been generated and sent.
+	 *
+	 * @param  WP_USer $user WP_User object of the logged-in user.
+	 * @return boolean
+	 */
+	public function pre_process_authentication( $user ) {
+		if ( isset( $user->ID ) && isset( $_REQUEST[ self::INPUT_NAME_RESEND_CODE ] ) ) {
+			$this->generate_and_send_token( $user );
+			return true;
+		}
+
+		return false;
 	}
 
 	/**
