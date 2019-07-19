@@ -50,11 +50,13 @@ class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
 		?>
         <div>
 			<?php
-			echo esc_html( sprintf(
-			/* translators: %s: mobile phone number */
-				__( 'Authentication codes will be sent to %s.', 'two-factor-extensions' ),
-				$mobile
-			) );
+			echo esc_html(
+				sprintf(
+				/* translators: %s: mobile phone number */
+					__( 'Authentication codes will be sent to %s.', 'two-factor-extensions' ),
+					$mobile
+				)
+			);
 			?>
         </div>
 		<?php
@@ -162,11 +164,12 @@ class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
 	 * @return bool|void
 	 */
 	public function validate_authentication( $user ) {
-		if ( ! isset( $user->ID ) || ! isset( $_REQUEST['two-factor-sms-code'] ) ) {
+		// Nonce verified in \Two_Factor_Core::login_form_validate_2fa.
+		if ( ! isset( $user->ID ) || ! isset( $_REQUEST['two-factor-sms-code'] ) ) { //phpcs:ignore
 			return false;
 		}
 
-		return $this->validate_token( $user->ID, $_REQUEST['two-factor-sms-code'] );
+		return $this->validate_token( $user->ID, $_REQUEST['two-factor-sms-code'] ); //phpcs:ignore
 	}
 
 	/**
@@ -194,7 +197,8 @@ class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
 	 * @return boolean
 	 */
 	public function pre_process_authentication( $user ) {
-		if ( isset( $user->ID ) && isset( $_REQUEST[ self::INPUT_NAME_RESEND_CODE ] ) ) {
+		// Nonce verified in \Two_Factor_Core::login_form_validate_2fa.
+		if ( isset( $user->ID ) && isset( $_REQUEST[ self::INPUT_NAME_RESEND_CODE ] ) ) { //phpcs:ignore
 			$this->generate_and_send_token( $user );
 			return true;
 		}
@@ -205,7 +209,7 @@ class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
 	/**
 	 * Validate that the user provided the correct token
 	 *
-	 * @param int $user_id The ID of the user.
+	 * @param int    $user_id The ID of the user.
 	 * @param string $token Token provided by the user.
 	 *
 	 * @return bool
