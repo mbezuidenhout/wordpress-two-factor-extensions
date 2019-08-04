@@ -7,17 +7,17 @@
  * registers the activation and deactivation functions, and defines a function
  * that starts the plugin.
  *
- * @link              https://www.facebook.com/marius.bezuidenhout1
+ * @link              https://profiles.wordpress.org/mbezuidenhout/
  * @since             1.0.0
  * @package           Two_Factor_Extensions
  *
  * @wordpress-plugin
- * Plugin Name:       Two Factor Extensions
+ * Plugin Name:       Extensions for Two-Factor
  * Plugin URI:        https://github.com/mbezuidenhout/two-factor-extensions
  * Description:       Extensions to the Two-Factor plugin providing additional sms authentication.
  * Version:           1.0.0
  * Author:            Marius Bezuidenhout
- * Author URI:        https://www.facebook.com/marius.bezuidenhout1
+ * Author URI:        https://profiles.wordpress.org/mbezuidenhout/
  * License:           GPL-3.0+
  * License URI:       http://www.gnu.org/licenses/gpl-3.0.txt
  * Text Domain:       two-factor-extensions
