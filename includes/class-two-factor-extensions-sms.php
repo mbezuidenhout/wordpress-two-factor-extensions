@@ -108,7 +108,7 @@ class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
 
 		if ( function_exists( 'wp_sms' ) ) { // PlaySMS plugin.
 			return wp_sms( $user->get( 'mobile' ), $message );
-		} elseif ( function_exists( 'wp_send_sms' ) ) { // WP SMS plugin.
+		} elseif ( function_exists( 'wp_sms_send' ) ) { // WP SMS plugin.
 			return wp_sms_send( $user->get( 'mobile' ), $message );
 		} else {
 			return new WP_Error( 'no_sms_mechanism', __( 'No compatible mechanism is activated to send sms messages', 'two-factor-extensions' ) );
@@ -135,7 +135,7 @@ class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
         <p>
             <label for="authcode"><?php esc_html_e( 'Verification Code:', 'two-factor' ); ?></label>
             <input type="tel" name="two-factor-sms-code" id="authcode" class="input" value="" size="20"
-                   pattern="[0-9]*"/>
+                   pattern="[0-9]*" autocomplete="one-time-code"/>
 			<?php submit_button( __( 'Log In', 'two-factor' ) ); ?>
         </p>
         <p class="two-factor-email-resend">
@@ -165,11 +165,11 @@ class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
 	 */
 	public function validate_authentication( $user ) {
 		// Nonce verified in \Two_Factor_Core::login_form_validate_2fa.
-		if ( ! isset( $user->ID ) || ! isset( $_REQUEST['two-factor-sms-code'] ) ) { //phpcs:ignore
+		if ( ! isset( $user->ID ) || ! isset( $_REQUEST['two-factor-sms-code'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
 			return false;
 		}
 
-		return $this->validate_token( $user->ID, $_REQUEST['two-factor-sms-code'] ); //phpcs:ignore
+		return $this->validate_token( $user->ID, $_REQUEST['two-factor-sms-code'] ); // phpcs:ignore WordPress.Security.NonceVerification
 	}
 
 	/**
@@ -198,7 +198,7 @@ class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
 	 */
 	public function pre_process_authentication( $user ) {
 		// Nonce verified in \Two_Factor_Core::login_form_validate_2fa.
-		if ( isset( $user->ID ) && isset( $_REQUEST[ self::INPUT_NAME_RESEND_CODE ] ) ) { //phpcs:ignore
+		if ( isset( $user->ID ) && isset( $_REQUEST[ self::INPUT_NAME_RESEND_CODE ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
 			$this->generate_and_send_token( $user );
 			return true;
 		}

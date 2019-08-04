@@ -14,7 +14,7 @@
  * @wordpress-plugin
  * Plugin Name:       Two Factor Extensions
  * Plugin URI:        https://github.com/mbezuidenhout/two-factor-extensions
- * Description:       This is a short description of what the plugin does. It's displayed in the WordPress admin area.
+ * Description:       Extensions to the Two-Factor plugin providing additional sms authentication.
  * Version:           1.0.0
  * Author:            Marius Bezuidenhout
  * Author URI:        https://www.facebook.com/marius.bezuidenhout1
