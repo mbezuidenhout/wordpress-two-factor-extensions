@@ -104,7 +104,7 @@ class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
 		$token = $this->generate_token( $user->ID );
 
 		/* translators: 1: site name 2: token */
-		$message = wp_strip_all_tags( sprintf( __( 'Your login confirmation code for %1$s is %2$s.', 'two-factor-extensions' ), get_bloginfo( 'url' ), $token ) );
+		$message = wp_strip_all_tags( sprintf( __( 'Your login confirmation code for %1$s is: %2$s', 'two-factor-extensions' ), get_bloginfo( 'name' ), $token ) );
 
 		if ( function_exists( 'wp_sms' ) ) { // PlaySMS plugin.
 			return wp_sms( $user->get( 'mobile' ), $message );
@@ -134,7 +134,7 @@ class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
         <p><?php esc_html_e( 'A verification code has been sent to the mobile number associated with your account.', 'two-factor-extensions' ); ?></p>
         <p>
             <label for="authcode"><?php esc_html_e( 'Verification Code:', 'two-factor' ); ?></label>
-            <input type="tel" name="two-factor-sms-code" id="authcode" class="input" value="" size="20"
+            <input type="password" name="two-factor-sms-code" id="authcode" class="input" value="" size="20"
                    pattern="[0-9]*" autocomplete="one-time-code"/>
 			<?php submit_button( __( 'Log In', 'two-factor' ) ); ?>
         </p>
