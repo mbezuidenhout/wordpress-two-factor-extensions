@@ -115,24 +115,61 @@ class Two_Factor_Extensions_Public {
 	 * Load extensions to the two-factor WordPress plugin.
 	 */
 	public function add_extensions() {
-		if ( ! is_plugin_active( 'two-factor/two-factor.php' ) || ! is_plugin_active( 'playsms/playsms.php' ) ) {
-			add_action( 'admin_notices', array( $this, 'admin_notice_plugin_missing' ) );
-		} else {
+		if ( ! function_exists( 'is_plugin_active' ) ) {
+			require_once ABSPATH . 'wp-admin' . DIRECTORY_SEPARATOR . 'includes' . DIRECTORY_SEPARATOR . 'plugin.php';
+		}
+		if ( is_plugin_active( 'two-factor/two-factor.php' ) && ( is_plugin_active( 'playsms/playsms.php' || is_plugin_active( 'wp-sms/wp-sms.php' ) ) ) ) {
 			add_filter( 'two_factor_providers', array( $this, 'add_providers' ) );
+		} else {
+			add_action( 'admin_notices', array( $this, 'admin_notice_plugin_missing' ) );
 		}
 	}
 
 	/**
 	 * Add more 2fa providers
 	 *
-	 * @param array $providers  List of configured providers.
+	 * @param array $providers List of configured providers.
 	 *
 	 * @return array
 	 */
 	public function add_providers( $providers ) {
+		$disabled_providers                     = array(
+			//'Two_Factor_Email',
+			'Two_Factor_Totp',
+			'Two_Factor_FIDO_U2F',
+			'Two_Factor_Backup_Codes',
+			'Two_Factor_Dummy',
+		);
 		$providers['Two_Factor_Extensions_SMS'] = plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-two-factor-extensions-sms.php';
 
+		foreach ( $providers as $provider => $class_file ) {
+			if ( in_array( $provider, $disabled_providers ) ) {
+				unset( $providers[ $provider ] );
+			}
+		}
+
 		return $providers;
+	}
+
+	/**
+	 * Add the mobile number field to the user registration form.
+	 */
+	public function register_form() {
+	}
+
+	/**
+	 * Add company field to user contact methods.
+	 *
+	 * @param array $methods Associative array of contact methods.
+	 *
+	 * @return mixed
+	 */
+	public function user_contactmethods( $methods ) {
+		$new_methods = array(
+			'mobile' => __( 'Mobile', 'two-factor-extensions' ),
+		);
+
+		return array_merge( $methods, $new_methods );
 	}
 
 }

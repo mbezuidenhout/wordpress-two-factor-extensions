@@ -185,8 +185,53 @@ class Two_Factor_Extensions {
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_styles' );
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_scripts' );
 
-		$this->loader->add_filter( 'plugins_loaded', $plugin_public, 'add_extensions' );
+		$this->loader->add_action( 'plugins_loaded', $plugin_public, 'add_extensions' );
+		$this->loader->add_filter( 'user_contactmethods', $plugin_public, 'user_contactmethods' );
+		$this->loader->add_action( 'register_form', $plugin_public, 'register_form' );
 
+	}
+
+	/**
+	 * Locate a template and return the path for inclusion.
+	 *
+	 * This is the load order:
+	 *
+	 * @since 1.0.0
+	 *
+	 * yourtheme/$template_path/$template_name
+	 * yourtheme/$template_name
+	 * $default_path/$template_name
+	 *
+	 * @param string $template_name Template name.
+	 * @param string $template_path Template path. (default: '').
+	 * @param string $default_path Default path. (default: '').
+	 *
+	 * @return string
+	 */
+	public static function locate_template( $template_name, $template_path = '', $default_path = '' ) {
+		if ( ! $template_path ) {
+			$template_path = get_stylesheet_directory() . 'playsms/';
+		}
+
+		if ( ! $default_path ) {
+			$default_path = plugin_dir_path( dirname( __FILE__ ) ) . 'templates/';
+		}
+
+		// Look within passed path within the theme - this is priority.
+		$template = locate_template(
+			array(
+				trailingslashit( $template_path ) . $template_name,
+				$template_name,
+			)
+		);
+
+		// Get default template/.
+		if ( ! $template ) {
+			$template = $default_path . $template_name;
+		}
+
+		// Return what we found.
+		return apply_filters( '2fe_locate_template', $template, $template_name, $template_path );
 	}
 
 	/**
