@@ -143,7 +143,7 @@ class Two_Factor_Extensions_Public {
 		$providers['Two_Factor_Extensions_SMS'] = plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-two-factor-extensions-sms.php';
 
 		foreach ( $providers as $provider => $class_file ) {
-			if ( in_array( $provider, $disabled_providers ) ) {
+			if ( in_array( $provider, $disabled_providers, true ) ) {
 				unset( $providers[ $provider ] );
 			}
 		}
