@@ -29,6 +29,7 @@ class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
 	 */
 	protected function __construct() {
 		add_action( 'two-factor-user-options-' . __CLASS__, array( $this, 'user_options' ) );
+		add_action( 'wp_ajax_nopriv_add_mobile', array( $this, 'add_mobile' ) );
 
 		return parent::__construct();
 	}
@@ -94,22 +95,50 @@ class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
 	}
 
 	/**
+	 * Send code to user's new mobile number for verification.
+	 *
+	 * @param int $user_id User ID number.
+	 * @param string $mobile User's new mobile number.
+	 */
+	public function add_mobile() {
+		$nonce_verified = Two_Factor_Core::verify_login_nonce( $_REQUEST['wp-auth-id'], $_REQUEST['wp-auth-nonce'] );
+		if ( $nonce_verified ) {
+			$user   = get_userdata( $_REQUEST['wp-auth-id'] );
+			$newmobile = $_REQUEST['newmobile'];
+			update_user_meta( $_REQUEST['wp-auth-id'], '_new_mobile', $newmobile );
+			$this->generate_and_send_token( $user, true );
+			wp_send_json_success();
+		} else {
+			wp_send_json_error( array( 'message' => __( 'Nonce verification failed.', 'two-factor-extensions' ) ) );
+		}
+	}
+
+	/**
 	 * Generate and send the user their token to be used to log in.
 	 *
 	 * @param WP_User $user WP_User object of the logged-in user.
+	 * @param bool $isnew Send token to new mobile number.
 	 *
 	 * @return bool|WP_Error
 	 */
-	protected function generate_and_send_token( $user ) {
+	protected function generate_and_send_token( $user, $isnew = false ) {
+		define( 'SMS_DEBUG', true );
 		$token = $this->generate_token( $user->ID );
 
 		/* translators: 1: site name 2: token */
 		$message = wp_strip_all_tags( sprintf( __( 'Your login confirmation code for %1$s is: %2$s', 'two-factor-extensions' ), get_bloginfo( 'name' ), $token ) );
 
-		if ( function_exists( 'wp_sms' ) ) { // PlaySMS plugin.
-			return wp_sms( $user->get( 'mobile' ), $message );
+		$to = $user->get( 'mobile' );
+		if ( empty( $to ) || $isnew ) {
+			$to = $user->get( '_new_mobile' );
+		}
+		if ( defined( 'SMS_DEBUG' ) && SMS_DEBUG ) {
+			/* translators: %s: site name */
+			return wp_mail( "{$to}@example.com", sprintf( __( 'Your login confirmation code for %s', 'two-factor' ), get_bloginfo( 'name' ) ), $message );
+		} elseif ( function_exists( 'wp_sms' ) ) { // PlaySMS plugin.
+			return wp_sms( $to, $message );
 		} elseif ( function_exists( 'wp_sms_send' ) ) { // WP SMS plugin.
-			return wp_sms_send( $user->get( 'mobile' ), $message );
+			return wp_sms_send( $to, $message );
 		} else {
 			return new WP_Error( 'no_sms_mechanism', __( 'No compatible mechanism is activated to send sms messages', 'two-factor-extensions' ) );
 		}

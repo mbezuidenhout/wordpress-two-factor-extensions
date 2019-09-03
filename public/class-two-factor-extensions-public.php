@@ -39,6 +39,8 @@ class Two_Factor_Extensions_Public {
 	 */
 	private $version;
 
+	const INPUT_NAME_SEND_CODE = 'sms-send-code';
+
 	/**
 	 * Initialize the class and set its properties.
 	 *
@@ -126,6 +128,29 @@ class Two_Factor_Extensions_Public {
 	}
 
 	/**
+	 * Add styles to the login pages.
+	 */
+	public function login_enqueue_style() {
+		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/two-factor-extensions-login.css', array(), $this->version, 'all' );
+	}
+
+	/**
+	 * Add scripts to the login page.
+	 */
+	public function login_enqueue_script() {
+		wp_enqueue_script( $this->plugin_name . '-login', plugin_dir_url( __FILE__ ) . 'js/two-factor-extensions-login.js', array( 'jquery' ), $this->version, false );
+
+		$script_localization = array(
+			'sendCodeLabel' => __( 'Resend Code', 'two-factor' ),
+			'nonce'         => wp_create_nonce( 'mobile-number-verification' ),
+			'ajaxUrl'       => admin_url( 'admin-ajax.php' ),
+			'ajaxAction'    => 'add_mobile',
+		);
+
+		wp_localize_script( $this->plugin_name . '-login', 'loginPage', $script_localization );
+	}
+
+	/**
 	 * Add more 2fa providers
 	 *
 	 * @param array $providers List of configured providers.
@@ -170,6 +195,231 @@ class Two_Factor_Extensions_Public {
 		);
 
 		return array_merge( $methods, $new_methods );
+	}
+
+	/**
+	 * Check enforced 2fa methods and obtain necessary parameters.
+	 *
+	 * @param string $user_login Username.
+	 * @param WP_User $user WP_User object of the logged-in user.
+	 */
+	public function check_enforced_2fa( $user_login, $user ) {
+		$user_mobile = get_user_meta( $user->ID, 'mobile', true );
+		if ( ! self::is_enforcing_mobile_two_factor() || ! empty( $user_mobile ) ) {
+			return;
+		}
+
+		wp_clear_auth_cookie();
+
+		self::show_mobile_number_verification( $user );
+		exit;
+	}
+
+	public function validate_2fa_mobile_number() {
+		if ( ! isset( $_POST['wp-auth-id'], $_POST['wp-auth-nonce'] ) ) {
+			return;
+		}
+
+		$user = get_userdata( $_POST['wp-auth-id'] );
+		if ( ! $user ) {
+			return;
+		}
+
+		$nonce = $_POST['wp-auth-nonce'];
+		if ( true !== Two_Factor_Core::verify_login_nonce( $user->ID, $nonce ) ) {
+			wp_safe_redirect( get_bloginfo( 'url' ) );
+			exit;
+		}
+
+		if ( isset( $_POST['provider'] ) ) {
+			$providers = Two_Factor_Core::get_providers();
+			if ( isset( $providers[ $_POST['provider'] ] ) ) {
+				$provider = $providers[ $_POST['provider'] ];
+			} else {
+				wp_die( esc_html__( 'Cheatin&#8217; uh?', 'two-factor' ), 403 );
+			}
+		} else {
+			$provider = Two_Factor_Core::get_primary_provider_for_user( $user->ID );
+		}
+
+		// Allow the provider to re-send codes, etc.
+		if ( true === $provider->pre_process_authentication( $user ) ) {
+			$login_nonce = Two_Factor_Core::create_login_nonce( $user->ID );
+			if ( ! $login_nonce ) {
+				wp_die( esc_html__( 'Failed to create a login nonce.', 'two-factor' ) );
+			}
+
+			self::verify_mobile_html( $user, $login_nonce['key'], $_REQUEST['redirect_to'], '', $provider );
+			exit;
+		}
+
+		// Ask the provider to verify the second factor.
+		if ( true !== $provider->validate_authentication( $user ) ) {
+			do_action( 'wp_login_failed', $user->user_login );
+
+			$login_nonce = Two_Factor_Core::create_login_nonce( $user->ID );
+			if ( ! $login_nonce ) {
+				wp_die( esc_html__( 'Failed to create a login nonce.', 'two-factor' ) );
+			}
+
+			self::verify_mobile_html( $user, $login_nonce['key'], $_REQUEST['redirect_to'], esc_html__( 'ERROR: Invalid verification code.', 'two-factor' ), $provider );
+			exit;
+		}
+
+		Two_Factor_Core::delete_login_nonce( $user->ID );
+
+		$rememberme = false;
+		if ( isset( $_REQUEST['rememberme'] ) && $_REQUEST['rememberme'] ) {
+			$rememberme = true;
+		}
+
+		wp_set_auth_cookie( $user->ID, $rememberme );
+
+		// Must be global because that's how login_header() uses it.
+		global $interim_login;
+		$interim_login = isset( $_REQUEST['interim-login'] ); // WPCS: override ok.
+
+		if ( $interim_login ) {
+			$customize_login = isset( $_REQUEST['customize-login'] );
+			if ( $customize_login ) {
+				wp_enqueue_script( 'customize-base' );
+			}
+			$message = '<p class="message">' . __( 'You have logged in successfully.', 'two-factor' ) . '</p>';
+			$interim_login = 'success'; // WPCS: override ok.
+			login_header( '', $message ); ?>
+            </div>
+			<?php
+			/** This action is documented in wp-login.php */
+			do_action( 'login_footer' ); ?>
+			<?php if ( $customize_login ) : ?>
+                <script type="text/javascript">setTimeout(function () {
+                        new wp.customize.Messenger({
+                            url: '<?php echo wp_customize_url(); /* WPCS: XSS OK. */ ?>',
+                            channel: 'login'
+                        }).send('login')
+                    }, 1000);</script>
+			<?php endif; ?>
+            </body></html>
+			<?php
+			exit;
+		}
+		$redirect_to = apply_filters( 'login_redirect', $_REQUEST['redirect_to'], $_REQUEST['redirect_to'], $user );
+		wp_safe_redirect( $redirect_to );
+
+		exit;
+	}
+
+	/**
+	 * Check if mobile number 2fa is enforced.
+	 *
+	 * @return bool
+	 */
+	public static function is_enforcing_mobile_two_factor() {
+		return true;
+	}
+
+	/**
+	 * Display the mobile number verification form.
+	 *
+	 * @param WP_User $user WP_User object of the logged-in user.
+	 */
+	public static function show_mobile_number_verification( $user ) {
+		if ( ! $user ) {
+			$user = wp_get_current_user();
+		}
+
+		$nonce = Two_Factor_Core::create_login_nonce( $user->ID );
+
+		$redirect_to = isset( $_REQUEST['redirect_to'] ) ? $_REQUEST['redirect_to'] : admin_url(); // phpcs:ignore WordPress.Security.NonceVerification
+
+		self::verify_mobile_html( $user, $nonce['key'], $redirect_to, '', 'Two_Factor_Extensions_SMS' );
+	}
+
+	/**
+	 * Generate the html form for obtaining the user's mobile number.
+	 *
+	 * @param WP_User $user WP_User object of the logged-in user.
+	 * @param string $login_nonce A string nonce stored in usermeta.
+	 * @param string $redirect_to The URL to which the user would like to be redirected.
+	 */
+	public static function verify_mobile_html( $user, $login_nonce, $redirect_to, $message, $provider ) {
+		$interim_login = isset( $_REQUEST['interim-login'] ); // phpcs:ignore WordPress.Security.NonceVerification
+		$newmobile     = get_user_meta( $user->ID, '_new_mobile', true );
+
+		$rememberme = 0;
+		if ( isset( $_REQUEST['rememberme'] ) && $_REQUEST['rememberme'] ) { // phpcs:ignore WordPress.Security.NonceVerification
+			$rememberme = 1;
+		}
+
+		if ( ! function_exists( 'login_header' ) ) {
+			// We really should migrate login_header() out of `wp-login.php` so it can be called from an includes file.
+			include_once TWO_FACTOR_DIR . 'includes/function.login-header.php';
+		}
+
+		login_header();
+
+		if ( ! empty( $error_msg ) ) {
+			echo '<div id="login_error"><strong>' . esc_html( $error_msg ) . '</strong><br /></div>';
+		}
+		?>
+
+        <form name="validate_mobile_number_form" id="loginform"
+              action="<?php echo esc_url( Two_Factor_Core::login_url( array( 'action' => 'validate_2fa_mobile_number' ), 'login_post' ) ); ?>"
+              method="post" autocomplete="off">
+            <input type="hidden" name="provider" id="provider" value="<?php echo esc_attr( $provider ); ?>"/>
+            <input type="hidden" name="wp-auth-id" id="wp-auth-id" value="<?php echo esc_attr( $user->ID ); ?>"/>
+            <input type="hidden" name="wp-auth-nonce" id="wp-auth-nonce"
+                   value="<?php echo esc_attr( $login_nonce ); ?>"/>
+			<?php if ( $interim_login ) { ?>
+                <input type="hidden" name="interim-login" value="1"/>
+			<?php } else { ?>
+                <input type="hidden" name="redirect_to" value="<?php echo esc_attr( $redirect_to ); ?>"/>
+			<?php } ?>
+            <input type="hidden" name="rememberme" id="rememberme" value="<?php echo esc_attr( $rememberme ); ?>"/>
+
+            <p><?php esc_html_e( 'Enter your a mobile number below where you can receive text messages.', 'two-factor-extensions' ); ?></p>
+            <p>
+                <label for="mobilenumber"><?php esc_html_e( 'Mobile Number:', 'two-factor' ); ?></label>
+                <input type="tel" name="newmobile" id="mobilenumber" class="input"
+                       value="<?php echo esc_attr( $newmobile ) ?>" size="8"
+                       pattern="[0-9]*" autocomplete="mobile"/>
+            </p>
+            <p class="two-factor-extensions-message hidden"><?php esc_html_e( 'A verification code has been sent to the mobile number.', 'two-factor-extensions' ); ?></p>
+            <p class="two-factor-extensions-otp hidden">
+                <label for="authcode"><?php esc_html_e( 'Verification Code:', 'two-factor' ); ?></label>
+                <input type="password" name="two-factor-sms-code" id="authcode" class="input" value="" size="20"
+                       pattern="[0-9]*" autocomplete="one-time-code"/>
+            </p>
+            <p class="two-factor-mobile-send">
+                <input type="submit" class="button" name="<?php echo esc_attr( self::INPUT_NAME_SEND_CODE ); ?>"
+                       value="<?php esc_attr_e( 'Send Code', 'two-factor-extensions' ); ?>"/>
+                <input type="submit" name="wp-submit" id="wp-submit" class="button button-primary button-large hidden"
+                       value="Log In">
+            </p>
+        </form>
+
+        <p id="backtoblog">
+            <a href="<?php echo esc_url( home_url( '/' ) ); ?>"
+               title="<?php esc_attr_e( 'Are you lost?', 'two-factor' ); ?>">
+				<?php
+				echo esc_html(
+					sprintf(
+					// translators: %s: site name.
+						__( '&larr; Back to %s', 'two-factor' ),
+						get_bloginfo( 'title', 'display' )
+					)
+				);
+				?>
+            </a>
+        </p>
+        </div>
+		<?php
+		/** This action is documented in wp-login.php */
+		do_action( 'login_footer' ); ?>
+        <div class="clear"></div>
+        </body>
+        </html>
+		<?php
 	}
 
 }

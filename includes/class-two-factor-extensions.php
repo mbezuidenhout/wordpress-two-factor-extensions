@@ -189,6 +189,10 @@ class Two_Factor_Extensions {
 		$this->loader->add_filter( 'user_contactmethods', $plugin_public, 'user_contactmethods' );
 		$this->loader->add_action( 'register_form', $plugin_public, 'register_form' );
 
+		$this->loader->add_action( 'wp_login', $plugin_public, 'check_enforced_2fa', 1, 2 );
+		$this->loader->add_action( 'login_form_validate_2fa_mobile_number', $plugin_public, 'validate_2fa_mobile_number' );
+		$this->loader->add_action( 'login_enqueue_scripts', $plugin_public, 'login_enqueue_script' );
+		$this->loader->add_action( 'login_enqueue_scripts', $plugin_public, 'login_enqueue_style' );
 	}
 
 	/**

@@ -1,0 +1,4 @@
+
+.two-factor-extensions-otp.hidden, .two-factor-extensions-message.hidden {
+    display: none;
+}
