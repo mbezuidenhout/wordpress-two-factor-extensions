@@ -15,7 +15,7 @@
  * Plugin Name:       Extensions for Two-Factor
  * Plugin URI:        https://github.com/mbezuidenhout/two-factor-extensions
  * Description:       Extensions to the Two-Factor plugin providing additional sms authentication.
- * Version:           1.0.2
+ * Version:           1.1.0
  * Author:            Marius Bezuidenhout
  * Author URI:        https://profiles.wordpress.org/mbezuidenhout/
  * License:           GPL-3.0+
@@ -34,7 +34,7 @@ if ( ! defined( 'WPINC' ) ) {
  * Start at version 1.0.0 and use SemVer - https://semver.org
  * Rename this for your plugin and update it as you release new versions.
  */
-define( 'TWO_FACTOR_EXTENSIONS_VERSION', '1.0.2' );
+define( 'TWO_FACTOR_EXTENSIONS_VERSION', '1.1.0' );
 
 /**
  * The code that runs during plugin activation.
