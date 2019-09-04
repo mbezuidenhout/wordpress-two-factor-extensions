@@ -16,7 +16,7 @@
                     $('.two-factor-extensions-otp.hidden').removeClass('hidden');
                     $('.two-factor-extensions-message.hidden').removeClass('hidden');
                     $('#wp-submit').removeClass('hidden');
-                    $(this).val( loginPage.sendCodeLabel );
+                    $(this).val( loginPage.resendCodeLabel );
                 }, this),
                 error: function( e ) {
                     $('.two-factor-extensions-message.hidden').text( 'Error message' );

@@ -39,8 +39,6 @@ class Two_Factor_Extensions_Public {
 	 */
 	private $version;
 
-	const INPUT_NAME_SEND_CODE = 'sms-send-code';
-
 	/**
 	 * Initialize the class and set its properties.
 	 *
@@ -141,10 +139,11 @@ class Two_Factor_Extensions_Public {
 		wp_enqueue_script( $this->plugin_name . '-login', plugin_dir_url( __FILE__ ) . 'js/two-factor-extensions-login.js', array( 'jquery' ), $this->version, false );
 
 		$script_localization = array(
-			'sendCodeLabel' => __( 'Resend Code', 'two-factor' ),
-			'nonce'         => wp_create_nonce( 'mobile-number-verification' ),
-			'ajaxUrl'       => admin_url( 'admin-ajax.php' ),
-			'ajaxAction'    => 'add_mobile',
+			'resendCodeLabel' => __( 'Resend Code', 'two-factor' ),
+			'resendCodeName'  => Two_Factor_Extensions_SMS::INPUT_NAME_RESEND_CODE,
+			'nonce'           => wp_create_nonce( 'mobile-number-verification' ),
+			'ajaxUrl'         => admin_url( 'admin-ajax.php' ),
+			'ajaxAction'      => 'add_mobile',
 		);
 
 		wp_localize_script( $this->plugin_name . '-login', 'loginPage', $script_localization );
@@ -200,12 +199,23 @@ class Two_Factor_Extensions_Public {
 	/**
 	 * Check enforced 2fa methods and obtain necessary parameters.
 	 *
-	 * @param string $user_login Username.
-	 * @param WP_User $user WP_User object of the logged-in user.
+	 * @param string  $user_login Username.
+	 * @param WP_User $user       WP_User object of the logged-in user.
 	 */
 	public function check_enforced_2fa( $user_login, $user ) {
+		if ( ! Two_Factor_Extensions_SMS::is_enforcing_mobile_two_factor() ) {
+			return;
+		}
+
+		$enabled_providers = Two_Factor_Core::get_enabled_providers_for_user( $user->ID );
+
+		if ( ! in_array( 'Two_Factor_Extensions_SMS', $enabled_providers, true ) ) {
+			$enabled_providers[] = 'Two_Factor_Extensions_SMS';
+			update_user_meta( $user->ID, Two_Factor_Core::ENABLED_PROVIDERS_USER_META_KEY, $enabled_providers );
+		}
+
 		$user_mobile = get_user_meta( $user->ID, 'mobile', true );
-		if ( ! self::is_enforcing_mobile_two_factor() || ! empty( $user_mobile ) ) {
+		if ( ! empty( $user_mobile ) ) {
 			return;
 		}
 
@@ -215,26 +225,31 @@ class Two_Factor_Extensions_Public {
 		exit;
 	}
 
+	/**
+	 * Validate mobile number supplied for two factor authentication.
+	 */
 	public function validate_2fa_mobile_number() {
+		//phpcs:disable WordPress.Security.NonceVerification
 		if ( ! isset( $_POST['wp-auth-id'], $_POST['wp-auth-nonce'] ) ) {
 			return;
 		}
 
-		$user = get_userdata( $_POST['wp-auth-id'] );
+		$user = get_userdata( (int) $_POST['wp-auth-id'] );
 		if ( ! $user ) {
 			return;
 		}
 
-		$nonce = $_POST['wp-auth-nonce'];
+		$nonce = sanitize_key( $_POST['wp-auth-nonce'] );
 		if ( true !== Two_Factor_Core::verify_login_nonce( $user->ID, $nonce ) ) {
 			wp_safe_redirect( get_bloginfo( 'url' ) );
 			exit;
 		}
 
 		if ( isset( $_POST['provider'] ) ) {
+			/* @var Two_Factor_Provider[] $providers An array of two factor authentication providers. */
 			$providers = Two_Factor_Core::get_providers();
 			if ( isset( $providers[ $_POST['provider'] ] ) ) {
-				$provider = $providers[ $_POST['provider'] ];
+				$provider = $providers[ $_POST['provider'] ]; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 			} else {
 				wp_die( esc_html__( 'Cheatin&#8217; uh?', 'two-factor' ), 403 );
 			}
@@ -277,20 +292,23 @@ class Two_Factor_Extensions_Public {
 
 		// Must be global because that's how login_header() uses it.
 		global $interim_login;
-		$interim_login = isset( $_REQUEST['interim-login'] ); // WPCS: override ok.
+		$interim_login = isset( $_REQUEST['interim-login'] ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+
 
 		if ( $interim_login ) {
 			$customize_login = isset( $_REQUEST['customize-login'] );
 			if ( $customize_login ) {
 				wp_enqueue_script( 'customize-base' );
 			}
-			$message = '<p class="message">' . __( 'You have logged in successfully.', 'two-factor' ) . '</p>';
-			$interim_login = 'success'; // WPCS: override ok.
-			login_header( '', $message ); ?>
+			$message       = '<p class="message">' . __( 'You have logged in successfully.', 'two-factor' ) . '</p>';
+			$interim_login = 'success'; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+			login_header( '', $message );
+			?>
             </div>
 			<?php
 			/** This action is documented in wp-login.php */
-			do_action( 'login_footer' ); ?>
+			do_action( 'login_footer' );
+			?>
 			<?php if ( $customize_login ) : ?>
                 <script type="text/javascript">setTimeout(function () {
                         new wp.customize.Messenger({
@@ -307,15 +325,7 @@ class Two_Factor_Extensions_Public {
 		wp_safe_redirect( $redirect_to );
 
 		exit;
-	}
-
-	/**
-	 * Check if mobile number 2fa is enforced.
-	 *
-	 * @return bool
-	 */
-	public static function is_enforcing_mobile_two_factor() {
-		return true;
+		//phpcs:enable
 	}
 
 	/**
@@ -332,21 +342,24 @@ class Two_Factor_Extensions_Public {
 
 		$redirect_to = isset( $_REQUEST['redirect_to'] ) ? $_REQUEST['redirect_to'] : admin_url(); // phpcs:ignore WordPress.Security.NonceVerification
 
-		self::verify_mobile_html( $user, $nonce['key'], $redirect_to, '', 'Two_Factor_Extensions_SMS' );
+		self::verify_mobile_html( $user, $nonce['key'], $redirect_to, '', Two_Factor_Extensions_SMS::get_instance() );
 	}
 
 	/**
 	 * Generate the html form for obtaining the user's mobile number.
 	 *
-	 * @param WP_User $user WP_User object of the logged-in user.
-	 * @param string $login_nonce A string nonce stored in usermeta.
-	 * @param string $redirect_to The URL to which the user would like to be redirected.
+	 * @param WP_User             $user         WP_User object of the logged-in user.
+	 * @param string              $login_nonce  A string nonce stored in usermeta.
+	 * @param string              $redirect_to  The URL to which the user would like to be redirected.
+	 * @param string              $error_msg    The error message to show.
+	 * @param Two_Factor_Provider $provider     Instance of the 2fa provider.
 	 */
-	public static function verify_mobile_html( $user, $login_nonce, $redirect_to, $message, $provider ) {
+	public static function verify_mobile_html( $user, $login_nonce, $redirect_to, $error_msg, $provider ) {
 		$interim_login = isset( $_REQUEST['interim-login'] ); // phpcs:ignore WordPress.Security.NonceVerification
 		$newmobile     = get_user_meta( $user->ID, '_new_mobile', true );
 
-		$rememberme = 0;
+		$resend_code = method_exists( $provider, 'user_has_token' ) && $provider->user_has_token( $user->ID );
+		$rememberme  = 0;
 		if ( isset( $_REQUEST['rememberme'] ) && $_REQUEST['rememberme'] ) { // phpcs:ignore WordPress.Security.NonceVerification
 			$rememberme = 1;
 		}
@@ -366,7 +379,7 @@ class Two_Factor_Extensions_Public {
         <form name="validate_mobile_number_form" id="loginform"
               action="<?php echo esc_url( Two_Factor_Core::login_url( array( 'action' => 'validate_2fa_mobile_number' ), 'login_post' ) ); ?>"
               method="post" autocomplete="off">
-            <input type="hidden" name="provider" id="provider" value="<?php echo esc_attr( $provider ); ?>"/>
+            <input type="hidden" name="provider" id="provider" value="<?php echo esc_attr( get_class( $provider ) ); ?>"/>
             <input type="hidden" name="wp-auth-id" id="wp-auth-id" value="<?php echo esc_attr( $user->ID ); ?>"/>
             <input type="hidden" name="wp-auth-nonce" id="wp-auth-nonce"
                    value="<?php echo esc_attr( $login_nonce ); ?>"/>
@@ -384,16 +397,16 @@ class Two_Factor_Extensions_Public {
                        value="<?php echo esc_attr( $newmobile ) ?>" size="8"
                        pattern="[0-9]*" autocomplete="mobile"/>
             </p>
-            <p class="two-factor-extensions-message hidden"><?php esc_html_e( 'A verification code has been sent to the mobile number.', 'two-factor-extensions' ); ?></p>
-            <p class="two-factor-extensions-otp hidden">
+            <p class="two-factor-extensions-message <?php echo ! $resend_code ? 'hidden' : '' ?>"><?php esc_html_e( 'A verification code has been sent to the mobile number.', 'two-factor-extensions' ); ?></p>
+            <p class="two-factor-extensions-otp <?php echo ! $resend_code ? 'hidden' : '' ?>">
                 <label for="authcode"><?php esc_html_e( 'Verification Code:', 'two-factor' ); ?></label>
                 <input type="password" name="two-factor-sms-code" id="authcode" class="input" value="" size="20"
                        pattern="[0-9]*" autocomplete="one-time-code"/>
             </p>
             <p class="two-factor-mobile-send">
-                <input type="submit" class="button" name="<?php echo esc_attr( self::INPUT_NAME_SEND_CODE ); ?>"
-                       value="<?php esc_attr_e( 'Send Code', 'two-factor-extensions' ); ?>"/>
-                <input type="submit" name="wp-submit" id="wp-submit" class="button button-primary button-large hidden"
+                <input type="submit" class="button" name="<?php echo esc_attr( Two_Factor_Extensions_SMS::INPUT_NAME_SEND_CODE ); ?>"
+                       value="<?php echo ! $resend_code ? esc_attr__( 'Send Code', 'two-factor-extensions' ) : __( 'Resend Code', 'two-factor' ); ?>"/>
+                <input type="submit" name="wp-submit" id="wp-submit" class="button button-primary button-large <?php echo ! $resend_code ? 'hidden' : '' ?>"
                        value="Log In">
             </p>
         </form>
@@ -404,7 +417,7 @@ class Two_Factor_Extensions_Public {
 				<?php
 				echo esc_html(
 					sprintf(
-					// translators: %s: site name.
+						// translators: %s: site name.
 						__( '&larr; Back to %s', 'two-factor' ),
 						get_bloginfo( 'title', 'display' )
 					)

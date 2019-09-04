@@ -22,6 +22,7 @@
 class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
 
 	const TOKEN_META_KEY         = '_two_factor_extensions_sms_token';
+	const INPUT_NAME_SEND_CODE = 'sms-send-code';
 	const INPUT_NAME_RESEND_CODE = 'sms-resend-code';
 
 	/**
@@ -84,7 +85,7 @@ class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
 	 *
 	 * @return bool
 	 */
-	protected function user_has_token( $user_id ) {
+	public function user_has_token( $user_id ) {
 		$hashed_token = $this->get_user_token( $user_id );
 
 		if ( ! empty( $hashed_token ) ) {
@@ -122,7 +123,6 @@ class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
 	 * @return bool|WP_Error
 	 */
 	protected function generate_and_send_token( $user, $isnew = false ) {
-		define( 'SMS_DEBUG', true );
 		$token = $this->generate_token( $user->ID );
 
 		/* translators: 1: site name 2: token */
@@ -193,12 +193,22 @@ class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
 	 * @return bool|void
 	 */
 	public function validate_authentication( $user ) {
+		// phpcs:disable WordPress.Security.NonceVerification
 		// Nonce verified in \Two_Factor_Core::login_form_validate_2fa.
-		if ( ! isset( $user->ID ) || ! isset( $_REQUEST['two-factor-sms-code'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+		if ( ! isset( $user->ID ) || ! isset( $_REQUEST['two-factor-sms-code'] ) ) {
 			return false;
 		}
 
-		return $this->validate_token( $user->ID, $_REQUEST['two-factor-sms-code'] ); // phpcs:ignore WordPress.Security.NonceVerification
+		$is_validated = $this->validate_token( $user->ID, sanitize_key( $_REQUEST['two-factor-sms-code'] ) );
+		$new_mobile   = get_user_meta( $user->ID, '_new_mobile', true );
+
+		if ( $is_validated && ! empty( $new_mobile ) ) {
+			update_user_meta( $user->ID, 'mobile', $new_mobile );
+			delete_user_meta( $user->ID, '_new_mobile' );
+		}
+
+		return $is_validated;
+		// phpcs:enable
 	}
 
 	/**
@@ -275,6 +285,20 @@ class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
 	 */
 	public function is_available_for_user( $user ) {
 		return true;
+	}
+
+	/**
+	 * Check if mobile number 2fa is enforced.
+	 *
+	 * @return bool
+	 */
+	public static function is_enforcing_mobile_two_factor() {
+		$require_otp = Two_Factor_Extensions_Settings::get_instance()->get_setting( 'require_otp' );
+		if ( false !== $require_otp && 'on' === $require_otp ) {
+			return true;
+		}
+
+		return false;
 	}
 
 	/**

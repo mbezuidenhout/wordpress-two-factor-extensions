@@ -90,7 +90,6 @@ class Two_Factor_Extensions {
 		 */
 		if ( is_user_logged_in() && is_admin() ) {
 			require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-two-factor-extensions-admin.php';
-			require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-two-factor-extensions-settings.php';
 			$this->define_admin_hooks();
 		}
 	}
@@ -131,6 +130,16 @@ class Two_Factor_Extensions {
 		 */
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-two-factor-extensions-public.php';
 
+		/**
+		 * An API class for settings pages.
+		 */
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-two-factor-extensions-settings-api.php';
+
+		/**
+		 * The class responsible for showing and storing of plugin settings.
+		 */
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-two-factor-extensions-settings.php';
+
 		$this->loader = new Two_Factor_Extensions_Loader();
 
 	}
@@ -166,7 +175,8 @@ class Two_Factor_Extensions {
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
 
-		// $this->loader->add_action( 'admin_menu', $plugin_admin, 'admin_menu_options' );
+		$this->loader->add_action( 'admin_menu', $plugin_admin, 'admin_menu_options' );
+		$this->loader->add_action( 'admin_init', Two_Factor_Extensions_Settings::get_instance(), 'add_settings_fields' );
 
 		$this->loader->run();
 	}

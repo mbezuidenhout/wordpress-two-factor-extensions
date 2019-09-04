@@ -1,6 +1,6 @@
 <?php
 /**
- * Defined the plugin settings.
+ * Defines the plugin settings.
  *
  * @link       https://www.facebook.com/marius.bezuidenhout1
  * @since      1.0.0
@@ -14,11 +14,25 @@
  */
 class Two_Factor_Extensions_Settings {
 	/**
-	 * Singleton instance of this class
+	 * Singleton instance of this class.
 	 *
 	 * @var Two_Factor_Extensions_Settings
 	 */
 	private static $instance;
+
+	/**
+	 * Instance of the Playsms_Settings_API class.
+	 *
+	 * @var Two_Factor_Extensions_Settings_API
+	 */
+	private $settings_api;
+
+	/**
+	 * Array of plugin settings.
+	 *
+	 * @var array
+	 */
+	protected $basic_settings;
 
 	/**
 	 * Returns the singleton instance of the settings class
@@ -31,83 +45,104 @@ class Two_Factor_Extensions_Settings {
 		return self::$instance;
 	}
 
-	protected function save_settings() {
+	/**
+	 * Get setting by name
+	 *
+	 * @param string $name Name of setting to retrieve.
+	 *
+	 * @return mixed
+	 */
+	public function get_setting( $name ) {
+		if ( isset( $this->basic_settings[ $name ] ) ) {
+			return $this->basic_settings[ $name ];
+		} else {
+			return false;
+		}
+	}
 
+	/**
+	 * Return all settings
+	 *
+	 * @return array
+	 */
+	public function get_settings() {
+		return $this->basic_settings;
+	}
+
+	/**
+	 * Two_Factor_Extensions_Settings constructor.
+	 */
+	public function __construct() {
+		$this->settings_api = new Two_Factor_Extensions_Settings_API();
+
+		$default_settings = array();
+		foreach ( $this->get_settings_fields()['two_factor_extensions_basics'] as $setting ) {
+			$default_settings[ $setting['name'] ] = $setting['default'];
+		}
+
+		$settings             = empty( get_option( 'two_factor_extensions_basics' ) ) ? array() : get_option( 'two_factor_extensions_basics' );
+		$this->basic_settings = wp_parse_args( $settings, $default_settings );
 	}
 
 	/**
 	 * Register plugin settings
 	 */
 	public function settings_page() {
-		$this->add_settings_fields();
-		// Check that the user is allowed to update options.
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'two_factor_extensions' ) );
-		}
+		echo '<div class="wrap">';
 
-		// save options.
-		$this->save_settings();
+		$this->settings_api->show_navigation();
+		$this->settings_api->show_forms();
 
-		?>
-
-        <form method="post" action="">
-
-			<?php settings_fields( 'two_factor_extensions_settings_group' );               //settings group, defined as first argument in register_setting ?>
-			<?php do_settings_sections( 'two_factor_extensions_settings_page_section' );   //same as last argument used in add_settings_section ?>
-			<?php submit_button(); ?>
-
-			<?php wp_nonce_field( 'two_factor_extensions_settings_nonce' ); ?>
-            <div class="clear"></div>
-        </form>
-		<?php
+		echo '</div>';
 	}
 
-	public function validate_settings_fields() {
-
-	}
-
-	public function render_settings_field( $field ) {
-		switch ( $field['type'] ) {
-			case 'text':
-			default:
-				echo '<input id="' . esc_attr( $field['id'] ) . '" type="text" value="' . esc_attr( $field['default'] ) . '" />';
-				break;
-		}
-	}
-
-	public function get_settings() {
-		$settings = apply_filters(
-			'playsms_settings',
+	/**
+	 * Define the settings sections.
+	 *
+	 * @return array
+	 */
+	private function get_settings_sections() {
+		$sections = array(
 			array(
-				array(
-					'id'      => 'two_factor_extensions_enable_options',
-					'title'   => __( 'Enabled options', 'two_factor_extensions' ),
-					'desc'    => 'Options available to the user',
-					'default' => '',
-					'type'    => 'radio',
-					'tip'     => true,
-				),
-			)
+				'id'    => 'two_factor_extensions_basics',
+				'title' => __( 'Basic Settings', 'two-factor-extensions' ),
+			),
 		);
 
-		return $settings;
+		return apply_filters( 'two_factor_extensions_settings_sections', $sections );
 	}
 
 	/**
 	 * Registers plugin settings
 	 */
-	protected function add_settings_fields() {
-		register_setting( 'two_factor_extensions_settings_group', 'two_factor_extensions_settings', array(
-			$this,
-			'validate_settings_fields'
-		) );
-		add_settings_section( 'two_factor_extensions_settings_section', null, null, 'two_factor_extensions_settings_page_section' );
+	public function add_settings_fields() {
+		// set the settings.
+		$this->settings_api->set_sections( $this->get_settings_sections() );
+		$this->settings_api->set_fields( $this->get_settings_fields() );
 
-		foreach ( $this->get_settings() as $setting ) {
-			add_settings_field( $setting['id'], $setting['title'], array( $this, 'render_settings_field' ),
-				'two_factor_extensions_settings_page_section', 'two_factor_extensions_settings_section' );
-		}
+		// initialize settings.
+		$this->settings_api->admin_init();
 	}
 
+	/**
+	 * Returns all the settings fields
+	 *
+	 * @return array settings fields
+	 */
+	public function get_settings_fields() {
+		$settings_fields = array(
+			'two_factor_extensions_basics' => array(
+				array(
+					'name'              => 'require_otp',
+					'label'             => __( 'Require OTP', 'two-factor-extensions' ),
+					'desc'              => __( 'Require users to use a one-time-pin sent to their mobile device', 'two-factor-extensions' ),
+					'type'              => 'checkbox',
+					'default'           => false,
+					'sanitize_callback' => 'sanitize_text_field',
+				),
+			),
+		);
 
+		return apply_filters( 'two_factor_extensions_settings', $settings_fields );
+	}
 }
