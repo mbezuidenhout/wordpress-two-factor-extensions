@@ -22,7 +22,7 @@
 class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
 
 	const TOKEN_META_KEY         = '_two_factor_extensions_sms_token';
-	const INPUT_NAME_SEND_CODE = 'sms-send-code';
+	const INPUT_NAME_SEND_CODE   = 'sms-send-code';
 	const INPUT_NAME_RESEND_CODE = 'sms-resend-code';
 
 	/**

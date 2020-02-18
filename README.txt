@@ -14,3 +14,8 @@ This plugin provides extended features to the Two-Factor plugin.
 
 Two-Factor-Extensions provides sms functionality to the Two-Factor plugin. In order to send sms messages this plugin
 will require a plugin that provides sms messaging features. Currently it supports only supports WP SMS.
+
+== Changelog ==
+
+= 1.1.1 =
+* Fix: Added fix supplied by @bfritton for sending using WP_SMS extension
