@@ -118,11 +118,12 @@ class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
 	 * Generate and send the user their token to be used to log in.
 	 *
 	 * @param WP_User $user WP_User object of the logged-in user.
-	 * @param bool $isnew Send token to new mobile number.
+	 * @param bool    $isnew Send token to new mobile number.
 	 *
 	 * @return bool|WP_Error
 	 */
 	protected function generate_and_send_token( $user, $isnew = false ) {
+		define( 'SMS_DEBUG', true );
 		$token = $this->generate_token( $user->ID );
 
 		/* translators: 1: site name 2: token */
@@ -138,7 +139,7 @@ class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
 		} elseif ( function_exists( 'wp_sms' ) ) { // PlaySMS plugin.
 			return wp_sms( $to, $message );
 		} elseif ( function_exists( 'wp_sms_send' ) ) { // WP SMS plugin.
-			return wp_sms_send( $to, $message );
+			return wp_sms_send( [ $to ], $message );
 		} else {
 			return new WP_Error( 'no_sms_mechanism', __( 'No compatible mechanism is activated to send sms messages', 'two-factor-extensions' ) );
 		}
