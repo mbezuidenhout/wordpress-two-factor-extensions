@@ -157,20 +157,7 @@ class Two_Factor_Extensions_Public {
 	 * @return array
 	 */
 	public function add_providers( $providers ) {
-		$disabled_providers                     = array(
-			//'Two_Factor_Email',
-			'Two_Factor_Totp',
-			'Two_Factor_FIDO_U2F',
-			'Two_Factor_Backup_Codes',
-			'Two_Factor_Dummy',
-		);
 		$providers['Two_Factor_Extensions_SMS'] = plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-two-factor-extensions-sms.php';
-
-		foreach ( $providers as $provider => $class_file ) {
-			if ( in_array( $provider, $disabled_providers, true ) ) {
-				unset( $providers[ $provider ] );
-			}
-		}
 
 		return $providers;
 	}

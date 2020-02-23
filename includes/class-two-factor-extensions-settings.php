@@ -75,12 +75,12 @@ class Two_Factor_Extensions_Settings {
 	public function __construct() {
 		$this->settings_api = new Two_Factor_Extensions_Settings_API();
 
-		$default_settings = array();
+		$default_settings = [];
 		foreach ( $this->get_settings_fields()['two_factor_extensions_basics'] as $setting ) {
 			$default_settings[ $setting['name'] ] = $setting['default'];
 		}
 
-		$settings             = empty( get_option( 'two_factor_extensions_basics' ) ) ? array() : get_option( 'two_factor_extensions_basics' );
+		$settings             = empty( get_option( 'two_factor_extensions_basics' ) ) ? [] : get_option( 'two_factor_extensions_basics' );
 		$this->basic_settings = wp_parse_args( $settings, $default_settings );
 	}
 
@@ -102,12 +102,12 @@ class Two_Factor_Extensions_Settings {
 	 * @return array
 	 */
 	private function get_settings_sections() {
-		$sections = array(
-			array(
+		$sections = [
+			[
 				'id'    => 'two_factor_extensions_basics',
 				'title' => __( 'Basic Settings', 'two-factor-extensions' ),
-			),
-		);
+			],
+		];
 
 		return apply_filters( 'two_factor_extensions_settings_sections', $sections );
 	}
@@ -131,16 +131,16 @@ class Two_Factor_Extensions_Settings {
 	 */
 	public function get_settings_fields() {
 		$settings_fields = array(
-			'two_factor_extensions_basics' => array(
-				array(
+			'two_factor_extensions_basics' => [
+				[
 					'name'              => 'require_otp',
 					'label'             => __( 'Require OTP', 'two-factor-extensions' ),
 					'desc'              => __( 'Require users to use a one-time-pin sent to their mobile device', 'two-factor-extensions' ),
 					'type'              => 'checkbox',
 					'default'           => false,
 					'sanitize_callback' => 'sanitize_text_field',
-				),
-			),
+				],
+			],
 		);
 
 		return apply_filters( 'two_factor_extensions_settings', $settings_fields );

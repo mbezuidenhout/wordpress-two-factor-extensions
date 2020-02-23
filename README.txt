@@ -17,5 +17,8 @@ will require a plugin that provides sms messaging features. Currently it support
 
 == Changelog ==
 
+= 1.1.2 =
+* Fix: Removed the disablement of alternative two factor methods.
+
 = 1.1.1 =
 * Fix: Added fix supplied by @bfritton for sending using WP_SMS extension

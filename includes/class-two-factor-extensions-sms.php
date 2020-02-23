@@ -29,8 +29,8 @@ class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
 	 * Two_Factor_Extensions_SMS constructor.
 	 */
 	protected function __construct() {
-		add_action( 'two-factor-user-options-' . __CLASS__, array( $this, 'user_options' ) );
-		add_action( 'wp_ajax_nopriv_add_mobile', array( $this, 'add_mobile' ) );
+		add_action( 'two-factor-user-options-' . __CLASS__, [ $this, 'user_options' ] );
+		add_action( 'wp_ajax_nopriv_add_mobile', [ $this, 'add_mobile' ] );
 
 		return parent::__construct();
 	}
@@ -110,7 +110,7 @@ class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
 			$this->generate_and_send_token( $user, true );
 			wp_send_json_success();
 		} else {
-			wp_send_json_error( array( 'message' => __( 'Nonce verification failed.', 'two-factor-extensions' ) ) );
+			wp_send_json_error( [ 'message' => __( 'Nonce verification failed.', 'two-factor-extensions' ) ] );
 		}
 	}
 

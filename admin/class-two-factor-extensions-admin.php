@@ -73,7 +73,7 @@ class Two_Factor_Extensions_Admin {
 		 * class.
 		 */
 
-		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/two-factor-extensions-admin.css', array(), $this->version, 'all' );
+		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/two-factor-extensions-admin.css', [], $this->version, 'all' );
 
 	}
 
@@ -96,7 +96,7 @@ class Two_Factor_Extensions_Admin {
 		 * class.
 		 */
 
-		wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/two-factor-extensions-admin.js', array( 'jquery' ), $this->version, false );
+		wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/two-factor-extensions-admin.js', [ 'jquery' ], $this->version, false );
 
 	}
 
@@ -104,7 +104,7 @@ class Two_Factor_Extensions_Admin {
 	 * Add the menu option under settings to change two factor options
 	 */
 	public function admin_menu_options() {
-		add_options_page( __( 'Two Factor', 'two-factor-extensions' ), __( 'Two Factor', 'two-factor-extensions' ), 'manage_options', 'two-factor-settings', array( Two_Factor_Extensions_Settings::get_instance(), 'settings_page' ) );
+		add_options_page( __( 'Two Factor', 'two-factor-extensions' ), __( 'Two Factor', 'two-factor-extensions' ), 'manage_options', 'two-factor-settings', [ Two_Factor_Extensions_Settings::get_instance(), 'settings_page' ] );
 	}
 
 }

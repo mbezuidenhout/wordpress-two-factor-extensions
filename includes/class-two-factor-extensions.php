@@ -233,10 +233,10 @@ class Two_Factor_Extensions {
 
 		// Look within passed path within the theme - this is priority.
 		$template = locate_template(
-			array(
+			[
 				trailingslashit( $template_path ) . $template_name,
 				$template_name,
-			)
+			]
 		);
 
 		// Get default template/.
