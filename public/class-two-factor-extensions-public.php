@@ -194,7 +194,7 @@ class Two_Factor_Extensions_Public {
 			return;
 		}
 
-		$enabled_providers = Two_Factor_Core::get_enabled_providers_for_user( $user->ID );
+		$enabled_providers = Two_Factor_Core::get_enabled_providers_for_user( $user );
 
 		if ( ! in_array( 'Two_Factor_Extensions_SMS', $enabled_providers, true ) ) {
 			$enabled_providers[] = 'Two_Factor_Extensions_SMS';
