@@ -123,7 +123,9 @@ class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
 	 * @return bool|WP_Error
 	 */
 	protected function generate_and_send_token( $user, $isnew = false ) {
-		// define( 'SMS_DEBUG', true );
+		if ( isset( $_COOKIE['XDEBUG_SESSION'] ) && isset( $_SERVER['HTTP_HOST'] ) && 'localhost' === $_SERVER['HTTP_HOST'] ) {
+			define( 'SMS_DEBUG', true );
+		}
 		$token = $this->generate_token( $user->ID );
 
 		/* translators: 1: site name 2: token */
@@ -133,11 +135,16 @@ class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
 		if ( empty( $to ) || $isnew ) {
 			$to = $user->get( '_new_mobile' );
 		}
+
 		if ( defined( 'SMS_DEBUG' ) && SMS_DEBUG ) {
 			/* translators: %s: site name */
 			return wp_mail( "{$to}@example.com", sprintf( __( 'Your login confirmation code for %s', 'two-factor' ), get_bloginfo( 'name' ) ), $message );
 		} elseif ( function_exists( 'wp_sms' ) ) { // PlaySMS plugin.
-			return wp_sms( $to, $message );
+			$result = wp_sms( $to, $message );
+			if ( $result instanceof \WP_Error && 'on' === Two_Factor_Extensions_Settings::get_instance()->get_setting( 'send_debug_email', 'debug_settings' ) ) {
+				/* translators: %s: site name */
+				wp_mail( Two_Factor_Extensions_Settings::get_instance()->get_setting( 'debug_email', 'debug_settings' ), sprintf( __( 'Send sms failed for two factor authentication on  %s', 'two-factor-extensions' ), get_bloginfo( 'name' ) ), $result->get_error_message() );
+			}
 		} elseif ( function_exists( 'wp_sms_send' ) ) { // WP SMS plugin.
 			return wp_sms_send( [ $to ], $message );
 		} else {

@@ -35,6 +35,13 @@ class Two_Factor_Extensions_Settings {
 	protected $basic_settings;
 
 	/**
+	 * Array of debug settings.
+	 *
+	 * @var array
+	 */
+	protected $debug_settings;
+
+	/**
 	 * Returns the singleton instance of the settings class
 	 */
 	public static function get_instance() {
@@ -48,13 +55,14 @@ class Two_Factor_Extensions_Settings {
 	/**
 	 * Get setting by name
 	 *
-	 * @param string $name Name of setting to retrieve.
+	 * @param string $name    Name of setting to retrieve.
+	 * @param string $section Name of the setting section.
 	 *
 	 * @return mixed
 	 */
-	public function get_setting( $name ) {
-		if ( isset( $this->basic_settings[ $name ] ) ) {
-			return $this->basic_settings[ $name ];
+	public function get_setting( $name, $section = 'basic_settings' ) {
+		if ( isset( $this->$section[ $name ] ) ) {
+			return $this->$section[ $name ];
 		} else {
 			return false;
 		}
@@ -63,25 +71,33 @@ class Two_Factor_Extensions_Settings {
 	/**
 	 * Return all settings
 	 *
+	 * @param string $section Name of the section.
+	 *
 	 * @return array
 	 */
-	public function get_settings() {
-		return $this->basic_settings;
+	public function get_settings( $section = 'basic_settings' ) {
+		return $this->$section;
 	}
 
 	/**
 	 * Two_Factor_Extensions_Settings constructor.
 	 */
 	public function __construct() {
-		$this->settings_api = new Two_Factor_Extensions_Settings_API();
+		$default_settings       = [];
+		$default_debug_settings = [];
+		$this->settings_api     = new Two_Factor_Extensions_Settings_API();
 
-		$default_settings = [];
 		foreach ( $this->get_settings_fields()['two_factor_extensions_basics'] as $setting ) {
 			$default_settings[ $setting['name'] ] = $setting['default'];
 		}
+		foreach ( $this->get_settings_fields()['two_factor_extensions_debug'] as $setting ) {
+			$default_debug_settings[ $setting['name'] ] = $setting['default'];
+		}
 
 		$settings             = empty( get_option( 'two_factor_extensions_basics' ) ) ? [] : get_option( 'two_factor_extensions_basics' );
+		$debug                = empty( get_option( 'two_factor_extensions_debug' ) ) ? [] : get_option( 'two_factor_extensions_debug' );
 		$this->basic_settings = wp_parse_args( $settings, $default_settings );
+		$this->debug_settings = wp_parse_args( $debug, $default_debug_settings );
 	}
 
 	/**
@@ -106,6 +122,10 @@ class Two_Factor_Extensions_Settings {
 			[
 				'id'    => 'two_factor_extensions_basics',
 				'title' => __( 'Basic Settings', 'two-factor-extensions' ),
+			],
+			[
+				'id'    => 'two_factor_extensions_debug',
+				'title' => __( 'Debug Settings', 'two-factor-extensions' ),
 			],
 		];
 
@@ -138,6 +158,24 @@ class Two_Factor_Extensions_Settings {
 					'desc'              => __( 'Require users to use a one-time-pin sent to their mobile device', 'two-factor-extensions' ),
 					'type'              => 'checkbox',
 					'default'           => false,
+					'sanitize_callback' => 'sanitize_text_field',
+				],
+			],
+			'two_factor_extensions_debug'  => [
+				[
+					'name'              => 'send_debug_email',
+					'label'             => __( 'Send debug e-mails', 'two-factor-extensions' ),
+					'desc'              => __( 'Send debug e-mails', 'two-factor-extensions' ),
+					'type'              => 'checkbox',
+					'default'           => false,
+					'sanitize_callback' => 'sanitize_text_field',
+				],
+				[
+					'name'              => 'debug_email',
+					'label'             => __( 'Debug E-mail Address', 'two-factor-extensions' ),
+					'desc'              => __( 'Which address to send debug messages to', 'two-factor-extensions' ),
+					'type'              => 'text',
+					'default'           => get_option( 'admin_email' ),
 					'sanitize_callback' => 'sanitize_text_field',
 				],
 			],
