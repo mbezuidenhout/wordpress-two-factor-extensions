@@ -123,7 +123,7 @@ class Two_Factor_Extensions_SMS extends Two_Factor_Provider {
 	 * @return bool|WP_Error
 	 */
 	protected function generate_and_send_token( $user, $isnew = false ) {
-		define( 'SMS_DEBUG', true );
+		// define( 'SMS_DEBUG', true );
 		$token = $this->generate_token( $user->ID );
 
 		/* translators: 1: site name 2: token */

@@ -17,6 +17,9 @@ will require a plugin that provides sms messaging features. Currently it support
 
 == Changelog ==
 
+= 1.1.4 =
+* Fix: System failed to send SMS messages.
+
 = 1.1.3 =
 * Fix: System disabled all other alternative authentication methods.
 
