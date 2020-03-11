@@ -105,9 +105,9 @@ class Two_Factor_Extensions_Public {
 	 */
 	public function admin_notice_plugin_missing() {
 		?>
-        <div class="error">
-            <p><?php esc_html_e( 'Two Factor Extensions is enabled but not effective. It requires the Two-Factor and WP SMS plugins in order to work.', 'two-factor-extensions' ); ?></p>
-        </div>
+		<div class="error">
+			<p><?php esc_html_e( 'Two Factor Extensions is enabled but not effective. It requires the Two-Factor and WP SMS plugins in order to work.', 'two-factor-extensions' ); ?></p>
+		</div>
 		<?php
 	}
 
@@ -118,7 +118,7 @@ class Two_Factor_Extensions_Public {
 		if ( ! function_exists( 'is_plugin_active' ) ) {
 			require_once ABSPATH . 'wp-admin' . DIRECTORY_SEPARATOR . 'includes' . DIRECTORY_SEPARATOR . 'plugin.php';
 		}
-		if ( is_plugin_active( 'two-factor/two-factor.php' ) && ( is_plugin_active( 'playsms/playsms.php' || is_plugin_active( 'wp-sms/wp-sms.php' ) ) ) ) {
+		if ( is_plugin_active( 'two-factor/two-factor.php' ) && ( is_plugin_active( 'playsms/playsms.php' ) || is_plugin_active( 'wp-sms/wp-sms.php' ) ) ) {
 			add_filter( 'two_factor_providers', array( $this, 'add_providers' ) );
 		} else {
 			add_action( 'admin_notices', array( $this, 'admin_notice_plugin_missing' ) );
