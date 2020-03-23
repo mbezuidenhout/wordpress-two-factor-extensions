@@ -15,7 +15,7 @@
  * Plugin Name:       Extensions for Two-Factor
  * Plugin URI:        https://github.com/mbezuidenhout/two-factor-extensions
  * Description:       Extensions to the Two-Factor plugin providing additional sms authentication.
- * Version:           1.1.5
+ * Version:           1.1.6
  * Requires at least: 4.3
  * Tested up to:      5.4
  * Author:            Marius Bezuidenhout

@@ -105,7 +105,7 @@ class Two_Factor_Extensions_Public {
 	 */
 	public function admin_notice_plugin_missing() {
 		?>
-		<div class="error">
+		<div class="notice notice-error two-factor-extensions-error">
 			<p><?php esc_html_e( 'Two Factor Extensions is enabled but not effective. It requires the Two-Factor and WP SMS plugins in order to work.', 'two-factor-extensions' ); ?></p>
 		</div>
 		<?php
